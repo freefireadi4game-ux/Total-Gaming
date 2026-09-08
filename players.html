@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09090b">
+  <title>Total Gaming — Players</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="container header-inner">
+
+    <a href="index.html" class="brand">
+      <h1>TOTAL GAMING</h1>
+      <p>Players & Statistics</p>
+    </a>
+
+    <div class="country">🇮🇳 INDIA</div>
+
+  </div>
+</header>
+
+<main>
+
+<div class="container">
+
+  <section class="hero">
+
+    <div class="live">
+      <span class="live-dot"></span>
+      TEAM ROSTER
+    </div>
+
+    <h2>Players</h2>
+
+    <p>
+      Performance statistics of Total Gaming players.
+    </p>
+
+  </section>
+
+  <section class="section">
+
+    <div
+      id="playersList"
+      class="stats"
+      style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));"
+    ></div>
+
+  </section>
+
+</div>
+
+</main>
+
+<nav class="mobile-nav">
+
+  <div class="mobile-nav-inner">
+
+    <button onclick="location.href='index.html'">
+      Overview
+    </button>
+
+    <button onclick="location.href='matches.html'">
+      Matches
+    </button>
+
+    <button onclick="location.href='tournaments.html'">
+      Tournaments
+    </button>
+
+    <button class="active">
+      Players
+    </button>
+
+  </div>
+
+</nav>
+
+<script src="data.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const container =
+    document.getElementById("playersList");
+
+  const tournament =
+    TOURNAMENTS.find(
+      tournament => tournament.status === "ongoing"
+    ) || TOURNAMENTS[0];
+
+  if (!tournament) return;
+
+  const playerStats =
+    getPlayerStats(tournament.id);
+
+  playerStats
+    .sort((a, b) => b.kills - a.kills)
+    .forEach((player, index) => {
+
+      const card =
+        document.createElement("a");
+
+      card.href =
+        `player.html?id=${player.id}`;
+
+      card.className = "card";
+
+      card.innerHTML = `
+
+        <div
+          style="
+            display:flex;
+            align-items:center;
+            gap:14px;
+          "
+        >
+
+          <div class="avatar">
+            P${index + 1}
+          </div>
+
+          <div>
+
+            <div class="title">
+              ${player.name}
+            </div>
+
+            <div class="mvp-role">
+              ${player.role}
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="mini-stats">
+
+          <div class="mini-stat">
+            <div class="eyebrow">MATCHES</div>
+            <strong>${player.matches}</strong>
+          </div>
+
+          <div class="mini-stat">
+            <div class="eyebrow">KILLS</div>
+            <strong>${player.kills}</strong>
+          </div>
+
+        </div>
+
+      `;
+
+      container.appendChild(card);
+
+    });
+
+});
+
+</script>
+
+</body>
+</html>
