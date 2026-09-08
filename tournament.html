@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09090b">
+  <title>Total Gaming — Tournament</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+
+  <div class="container header-inner">
+
+    <a href="tournaments.html" class="brand">
+
+      <h1>TOTAL GAMING</h1>
+
+      <p>Tournament Details</p>
+
+    </a>
+
+    <div class="country">
+      🇮🇳 INDIA
+    </div>
+
+  </div>
+
+</header>
+
+<main>
+
+<div class="container">
+
+  <section class="hero">
+
+    <div class="live">
+      <span class="live-dot"></span>
+      TOURNAMENT
+    </div>
+
+    <div
+      id="tournamentHeader"
+      class="card"
+    ></div>
+
+  </section>
+
+  <section class="section">
+
+    <div class="section-heading">
+
+      <p>MATCH HISTORY</p>
+
+      <h3>Performance</h3>
+
+    </div>
+
+    <div
+      id="tournamentMatches"
+      class="matches"
+    ></div>
+
+  </section>
+
+</div>
+
+</main>
+
+<script src="data.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const params =
+    new URLSearchParams(location.search);
+
+  const id =
+    params.get("id") ||
+    TOURNAMENTS[0]?.id;
+
+  const tournament =
+    TOURNAMENTS.find(
+      item => item.id === id
+    );
+
+  const header =
+    document.getElementById(
+      "tournamentHeader"
+    );
+
+  if (!tournament) {
+
+    header.innerHTML = `
+      <p style="color:#71717a">
+        Tournament not found.
+      </p>
+    `;
+
+    return;
+
+  }
+
+  const stats =
+    getTournamentStats(
+      tournament.id
+    );
+
+  header.innerHTML = `
+
+    <div>
+
+      <div class="eyebrow">
+        ${tournament.status.toUpperCase()}
+      </div>
+
+      <div class="title">
+        ${tournament.name}
+      </div>
+
+    </div>
+
+    <div class="mini-stats">
+
+      <div class="mini-stat">
+
+        <div class="eyebrow">
+          MATCHES
+        </div>
+
+        <strong>
+          ${stats.matches}
+        </strong>
+
+      </div>
+
+      <div class="mini-stat">
+
+        <div class="eyebrow">
+          KILLS
+        </div>
+
+        <strong>
+          ${stats.kills}
+        </strong>
+
+      </div>
+
+      <div class="mini-stat">
+
+        <div class="eyebrow">
+          TOTAL POINTS
+        </div>
+
+        <strong>
+          ${stats.totalPoints}
+        </strong>
+
+      </div>
+
+    </div>
+
+  `;
+
+  const container =
+    document.getElementById(
+      "tournamentMatches"
+    );
+
+  getTournamentMatches(tournament.id)
+    .slice()
+    .reverse()
+    .forEach(match => {
+
+      const view =
+        getMatchView(match);
+
+      const item =
+        document.createElement("div");
+
+      item.className = "match";
+
+      item.innerHTML = `
+
+        <div class="match-left">
+
+          <div class="position">
+            ${match.position}
+          </div>
+
+          <div>
+
+            <div class="match-name">
+              Match ${match.matchNumber}
+            </div>
+
+            <div class="match-kills">
+              ${view.kills} kills · ${match.map}
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="match-points">
+
+          <strong>
+            ${view.totalPoints}
+          </strong>
+
+          <span>
+            POINTS
+          </span>
+
+        </div>
+
+      `;
+
+      container.appendChild(item);
+
+    });
+
+});
+
+</script>
+
+</body>
+</html>
