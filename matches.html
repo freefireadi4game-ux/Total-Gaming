@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09090b">
+  <title>Total Gaming — Matches</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="container header-inner">
+    <a href="index.html" class="brand">
+      <h1>TOTAL GAMING</h1>
+      <p>Esports Statistics</p>
+    </a>
+
+    <div class="country">🇮🇳 INDIA</div>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <section class="hero">
+      <div class="live">
+        <span class="live-dot"></span>
+        MATCH HISTORY
+      </div>
+
+      <h2>Matches</h2>
+      <p>Every Total Gaming match, result and performance.</p>
+    </section>
+
+    <section class="section">
+
+      <div class="section-heading">
+        <p>ALL MATCHES</p>
+        <h3>Recent Results</h3>
+      </div>
+
+      <div id="matchesPage" class="matches"></div>
+
+    </section>
+
+  </div>
+</main>
+
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <button onclick="location.href='index.html'">Overview</button>
+    <button class="active">Matches</button>
+    <button onclick="location.href='tournaments.html'">Tournaments</button>
+    <button onclick="location.href='players.html'">Players</button>
+  </div>
+</nav>
+
+<script src="data.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  const container = document.getElementById("matchesPage");
+
+  const matches = [...MATCHES].reverse();
+
+  matches.forEach(match => {
+
+    const view = getMatchView(match);
+
+    const item = document.createElement("div");
+
+    item.className = "match";
+
+    item.innerHTML = `
+      <div class="match-left">
+        <div class="position">
+          ${match.position}
+        </div>
+
+        <div>
+          <div class="match-name">
+            Match ${match.matchNumber}
+          </div>
+
+          <div class="match-kills">
+            ${view.kills} kills · ${match.map}
+          </div>
+        </div>
+      </div>
+
+      <div class="match-points">
+        <strong>${view.totalPoints}</strong>
+        <span>POINTS</span>
+      </div>
+    `;
+
+    container.appendChild(item);
+
+  });
+
+});
+</script>
+
+</body>
+</html>
