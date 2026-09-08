@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09090b">
+  <title>Total Gaming — Tournaments</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <div class="container header-inner">
+
+    <a href="index.html" class="brand">
+      <h1>TOTAL GAMING</h1>
+      <p>Esports Statistics</p>
+    </a>
+
+    <div class="country">🇮🇳 INDIA</div>
+
+  </div>
+</header>
+
+<main>
+
+<div class="container">
+
+  <section class="hero">
+
+    <div class="live">
+      <span class="live-dot"></span>
+      TOURNAMENT ARCHIVE
+    </div>
+
+    <h2>Tournaments</h2>
+
+    <p>
+      Explore Total Gaming's tournament history and results.
+    </p>
+
+  </section>
+
+  <section class="section">
+
+    <div
+      id="tournamentList"
+      class="matches">
+    </div>
+
+  </section>
+
+</div>
+
+</main>
+
+<nav class="mobile-nav">
+
+  <div class="mobile-nav-inner">
+
+    <button onclick="location.href='index.html'">
+      Overview
+    </button>
+
+    <button onclick="location.href='matches.html'">
+      Matches
+    </button>
+
+    <button class="active">
+      Tournaments
+    </button>
+
+    <button onclick="location.href='players.html'">
+      Players
+    </button>
+
+  </div>
+
+</nav>
+
+<script src="data.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const container =
+    document.getElementById("tournamentList");
+
+  TOURNAMENTS.forEach(tournament => {
+
+    const stats =
+      getTournamentStats(tournament.id);
+
+    const card =
+      document.createElement("a");
+
+    card.href =
+      `tournament.html?id=${tournament.id}`;
+
+    card.className = "card";
+
+    card.style.display = "block";
+    card.style.marginBottom = "10px";
+
+    card.innerHTML = `
+
+      <div
+        style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          gap:15px;
+        "
+      >
+
+        <div>
+
+          <div class="eyebrow">
+            ${tournament.status.toUpperCase()}
+          </div>
+
+          <div class="title">
+            ${tournament.name}
+          </div>
+
+        </div>
+
+        <div class="rank-box">
+
+          <span>POINTS</span>
+
+          <strong>
+            ${stats.totalPoints}
+          </strong>
+
+        </div>
+
+      </div>
+
+      <div class="mini-stats">
+
+        <div class="mini-stat">
+          <div class="eyebrow">MATCHES</div>
+          <strong>${stats.matches}</strong>
+        </div>
+
+        <div class="mini-stat">
+          <div class="eyebrow">KILLS</div>
+          <strong>${stats.kills}</strong>
+        </div>
+
+        <div class="mini-stat">
+          <div class="eyebrow">AVG</div>
+          <strong>${stats.averagePoints}</strong>
+        </div>
+
+      </div>
+
+    `;
+
+    container.appendChild(card);
+
+  });
+
+});
+
+</script>
+
+</body>
+</html>
