@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#09090b">
+  <title>Total Gaming — Player</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+
+  <div class="container header-inner">
+
+    <a href="players.html" class="brand">
+
+      <h1>TOTAL GAMING</h1>
+
+      <p>Player Profile</p>
+
+    </a>
+
+    <div class="country">
+      🇮🇳 INDIA
+    </div>
+
+  </div>
+
+</header>
+
+<main>
+
+<div class="container">
+
+  <section class="hero">
+
+    <div class="live">
+      <span class="live-dot"></span>
+      PLAYER PROFILE
+    </div>
+
+    <div
+      id="playerProfile"
+      class="card"
+    ></div>
+
+  </section>
+
+  <section class="section">
+
+    <div class="section-heading">
+
+      <p>PERFORMANCE</p>
+
+      <h3>Recent Matches</h3>
+
+    </div>
+
+    <div
+      id="playerMatches"
+      class="matches"
+    ></div>
+
+  </section>
+
+</div>
+
+</main>
+
+<script src="data.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const params =
+    new URLSearchParams(location.search);
+
+  const playerId =
+    params.get("id") || PLAYERS[0]?.id;
+
+  const player =
+    PLAYERS.find(
+      item => item.id === playerId
+    );
+
+  const profile =
+    document.getElementById("playerProfile");
+
+  if (!player) {
+
+    profile.innerHTML = `
+      <p style="color:#71717a">
+        Player not found.
+      </p>
+    `;
+
+    return;
+
+  }
+
+  const tournament =
+    TOURNAMENTS.find(
+      item => item.status === "ongoing"
+    ) || TOURNAMENTS[0];
+
+  const stats =
+    getPlayerStats(
+      tournament.id
+    ).find(
+      item => item.id === player.id
+    );
+
+  profile.innerHTML = `
+
+    <div
+      style="
+        display:flex;
+        align-items:center;
+        gap:16px;
+      "
+    >
+
+      <div class="avatar">
+        TG
+      </div>
+
+      <div>
+
+        <div class="eyebrow">
+          ${player.role}
+        </div>
+
+        <div class="title">
+          ${player.name}
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="mini-stats">
+
+      <div class="mini-stat">
+        <div class="eyebrow">MATCHES</div>
+        <strong>${stats.matches}</strong>
+      </div>
+
+      <div class="mini-stat">
+        <div class="eyebrow">KILLS</div>
+        <strong>${stats.kills}</strong>
+      </div>
+
+      <div class="mini-stat">
+        <div class="eyebrow">ROLE</div>
+        <strong>${player.role}</strong>
+      </div>
+
+    </div>
+
+  `;
+
+  const matchesContainer =
+    document.getElementById("playerMatches");
+
+  MATCHES
+    .slice()
+    .reverse()
+    .forEach(match => {
+
+      const entry =
+        match.players.find(
+          item => item.playerId === player.id
+        );
+
+      const item =
+        document.createElement("div");
+
+      item.className = "match";
+
+      item.innerHTML = `
+
+        <div class="match-left">
+
+          <div class="position">
+            ${match.position}
+          </div>
+
+          <div>
+
+            <div class="match-name">
+              Match ${match.matchNumber}
+            </div>
+
+            <div class="match-kills">
+              ${entry?.kills || 0} kills
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="match-points">
+
+          <strong>
+            ${entry?.kills || 0}
+          </strong>
+
+          <span>KILLS</span>
+
+        </div>
+
+      `;
+
+      matchesContainer.appendChild(item);
+
+    });
+
+});
+
+</script>
+
+</body>
+</html>
