@@ -1,30 +1,52 @@
 import Link from "next/link";
-import { Plus, Swords, ArrowRight } from "lucide-react";
+import {
+  Plus,
+  Swords,
+  ArrowRight,
+} from "lucide-react";
+
 import AdminShell from "@/components/admin/AdminShell";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
 import "@/app/admin/admin.css";
 
-const matches = [
-  {
-    id: "match-1",
-    number: 1,
-    map: "Bermuda",
-    position: 1,
-    kills: 10,
-    points: 22,
-    date: "08 Sep 2026",
-  },
-  {
-    id: "match-2",
-    number: 2,
-    map: "Purgatory",
-    position: 3,
-    kills: 8,
-    points: 16,
-    date: "08 Sep 2026",
-  },
-];
+export default async function AdminMatchesPage() {
+  const { data: matches, error } =
+    await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          id,
+          match_number,
+          match_date,
+          map,
+          placement,
+          total_kills,
+          total_points,
+          tournaments (
+            id,
+            name
+          ),
+          teams (
+            id,
+            name,
+            short_name
+          )
+        `
+      )
+      .order("match_date", {
+        ascending: false,
+      })
+      .order("match_number", {
+        ascending: true,
+      });
 
-export default function AdminMatchesPage() {
+  if (error) {
+    throw new Error(
+      `Failed to load matches: ${error.message}`
+    );
+  }
+
   return (
     <AdminShell
       title="Matches"
@@ -32,8 +54,13 @@ export default function AdminMatchesPage() {
     >
       <div className="admin-page-toolbar">
         <div>
-          <span className="admin-muted-label">RESULT MANAGEMENT</span>
-          <h2 className="admin-page-title">Match Results</h2>
+          <span className="admin-muted-label">
+            RESULT MANAGEMENT
+          </span>
+
+          <h2 className="admin-page-title">
+            Match Results
+          </h2>
         </div>
 
         <Link
@@ -46,50 +73,98 @@ export default function AdminMatchesPage() {
       </div>
 
       <div className="admin-panel">
-        <div className="admin-list">
-          {matches.map((match) => (
-            <div className="admin-list-row" key={match.id}>
-              <div className="admin-list-main">
-                <div className="admin-list-icon">
-                  <Swords size={18} />
-                </div>
+        {matches?.length ? (
+          <div className="admin-list">
+            {matches.map((match) => {
+              const tournament =
+                Array.isArray(match.tournaments)
+                  ? match.tournaments[0]
+                  : match.tournaments;
 
-                <div>
-                  <strong>
-                    Match {match.number} · {match.map}
-                  </strong>
+              const team =
+                Array.isArray(match.teams)
+                  ? match.teams[0]
+                  : match.teams;
 
-                  <span>
-                    {match.date} · Position {match.position} ·{" "}
-                    {match.kills} kills
-                  </span>
-                </div>
-              </div>
-
-              <div className="admin-list-right">
-                <div className="admin-points">
-                  <strong>{match.points}</strong>
-                  <span>POINTS</span>
-                </div>
-
-                <Link
-                  href={`/admin/matches/${match.id}`}
-                  className="admin-icon-link"
-                  aria-label={`Edit match ${match.number}`}
+              return (
+                <div
+                  className="admin-list-row"
+                  key={match.id}
                 >
-                  <ArrowRight size={17} />
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+                  <div className="admin-list-main">
+                    <div className="admin-list-icon">
+                      <Swords size={18} />
+                    </div>
+
+                    <div>
+                      <strong>
+                        Match {match.match_number}
+                        {" · "}
+                        {match.map ??
+                          "Map not set"}
+                      </strong>
+
+                      <span>
+                        {team?.name ??
+                          "Team"}
+                        {" · "}
+                        {tournament?.name ??
+                          "Tournament"}
+                        {" · "}
+                        {match.match_date}
+                        {" · Position "}
+                        {match.placement}
+                        {" · "}
+                        {match.total_kills}
+                        {" kills"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="admin-list-right">
+                    <div className="admin-points">
+                      <strong>
+                        {match.total_points}
+                      </strong>
+
+                      <span>
+                        POINTS
+                      </span>
+                    </div>
+
+                    <Link
+                      href={`/admin/matches/${match.id}`}
+                      className="admin-icon-link"
+                      aria-label={`Open match ${match.match_number}`}
+                    >
+                      <ArrowRight size={17} />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="admin-empty-state">
+            <Swords size={28} />
+
+            <strong>
+              No matches yet
+            </strong>
+
+            <span>
+              Create the first match from the
+              admin control panel.
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="admin-note">
-        <strong>Scoring:</strong> Position points and kill points are
-        calculated using the central scoring rules. Admin controls the
-        submitted match data.
+        <strong>Scoring:</strong>{" "}
+        Kill points and placement points are
+        calculated automatically.
       </div>
     </AdminShell>
   );
-                                            }
+}
