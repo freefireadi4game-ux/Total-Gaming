@@ -1,76 +1,143 @@
-"use client";
-
-import { useState } from "react";
+import Link from "next/link";
 import {
   Plus,
   Users,
   UserCheck,
   UserX,
+  Pencil,
 } from "lucide-react";
 
-import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminTopbar from "@/components/admin/AdminTopbar";
-import { PLAYERS } from "@/lib/data";
+import AdminShell from "@/components/admin/AdminShell";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import "../admin.css";
 
-export default function AdminPlayersPage() {
-  const [players] = useState(PLAYERS);
+export default async function AdminPlayersPage() {
+  const { data: players, error } =
+    await supabaseAdmin
+      .from("players")
+      .select(
+        `
+          id,
+          name,
+          role,
+          active,
+          avatar_url,
+          team_id,
+          teams (
+            id,
+            name,
+            short_name
+          )
+        `
+      )
+      .order("name");
 
-  const activePlayers = players.filter(
+  if (error) {
+    throw new Error(
+      `Failed to load players: ${error.message}`
+    );
+  }
+
+  const rows = players ?? [];
+
+  const activePlayers = rows.filter(
     (player) => player.active
   ).length;
 
+  const inactivePlayers =
+    rows.length - activePlayers;
+
   return (
-    <div className="admin-layout">
-      <AdminSidebar />
+    <AdminShell
+      title="Players"
+      subtitle="Manage the official roster and player status."
+    >
+      <div className="admin-page-toolbar">
+        <div>
+          <span className="admin-muted-label">
+            ROSTER CONTROL
+          </span>
 
-      <main className="admin-main">
-        <AdminTopbar
-          title="Players"
-          description="Manage the official Total Gaming roster."
-        />
+          <h2 className="admin-page-title">
+            Players
+          </h2>
+        </div>
 
-        <div className="admin-content">
-          <section className="admin-stats-grid">
-            <div className="admin-stat-card">
-              <div className="admin-stat-icon">
-                <Users size={19} />
-              </div>
+        <Link
+          href="/admin/players/new"
+          className="admin-primary-button"
+        >
+          <Plus size={17} />
+          Add Player
+        </Link>
+      </div>
 
-              <div>
-                <span>Total Players</span>
-                <strong>{players.length}</strong>
-              </div>
-            </div>
+      <div className="admin-stats-grid">
+        <div className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <Users size={19} />
+          </div>
 
-            <div className="admin-stat-card">
-              <div className="admin-stat-icon">
-                <UserCheck size={19} />
-              </div>
+          <div>
+            <span>Total Players</span>
+            <strong>{rows.length}</strong>
+          </div>
+        </div>
 
-              <div>
-                <span>Active Players</span>
-                <strong>{activePlayers}</strong>
-              </div>
-            </div>
-          </section>
+        <div className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <UserCheck size={19} />
+          </div>
 
-          <section className="admin-panel">
-            <div className="admin-panel-heading">
-              <div>
-                <span>ROSTER CONTROL</span>
-                <h2>Team Players</h2>
-              </div>
+          <div>
+            <span>Active Players</span>
+            <strong>{activePlayers}</strong>
+          </div>
+        </div>
 
-              <button className="admin-primary-button">
-                <Plus size={15} />
-                Add Player
-              </button>
-            </div>
+        <div className="admin-stat-card">
+          <div className="admin-stat-icon">
+            <UserX size={19} />
+          </div>
 
-            <div className="admin-table">
-              {players.map((player) => (
+          <div>
+            <span>Inactive Players</span>
+            <strong>{inactivePlayers}</strong>
+          </div>
+        </div>
+      </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-heading">
+          <div>
+            <span>ROSTER</span>
+            <h2>All Players</h2>
+          </div>
+        </div>
+
+        {!rows.length ? (
+          <div className="admin-empty-state">
+            <Users size={28} />
+
+            <strong>
+              No players yet
+            </strong>
+
+            <span>
+              Add your first player from the
+              admin panel.
+            </span>
+          </div>
+        ) : (
+          <div className="admin-table">
+            {rows.map((player) => {
+              const team =
+                Array.isArray(player.teams)
+                  ? player.teams[0]
+                  : player.teams;
+
+              return (
                 <div
                   className="admin-table-row"
                   key={player.id}
@@ -81,15 +148,22 @@ export default function AdminPlayersPage() {
                     </div>
 
                     <div>
-                      <strong>{player.name}</strong>
+                      <strong>
+                        {player.name}
+                      </strong>
 
-                      <span>{player.id}</span>
+                      <span>
+                        {team?.name ??
+                          "No team"}
+                      </span>
                     </div>
                   </div>
 
                   <div className="admin-table-info">
                     <span>ROLE</span>
-                    <strong>{player.role}</strong>
+                    <strong>
+                      {player.role ?? "—"}
+                    </strong>
                   </div>
 
                   <div className="admin-table-info">
@@ -110,15 +184,19 @@ export default function AdminPlayersPage() {
                     </strong>
                   </div>
 
-                  <button className="admin-secondary-button">
+                  <Link
+                    href={`/admin/players/${player.id}/edit`}
+                    className="admin-secondary-button"
+                  >
+                    <Pencil size={14} />
                     Edit
-                  </button>
+                  </Link>
                 </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      </main>
-    </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </AdminShell>
   );
 }
