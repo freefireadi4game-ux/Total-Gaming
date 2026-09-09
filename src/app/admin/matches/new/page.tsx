@@ -1,9 +1,15 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, Swords } from "lucide-react";
-import { TOURNAMENTS } from "@/lib/data";
+import {
+  ArrowLeft,
+  Save,
+  Swords,
+} from "lucide-react";
+
+import AdminShell from "@/components/admin/AdminShell";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createMatch } from "./actions";
+
+import "../../admin.css";
 
 const MAPS = [
   "Bermuda",
@@ -13,32 +19,70 @@ const MAPS = [
   "Kalahari",
 ];
 
-export default function NewMatchPage() {
-  const [tournamentId, setTournamentId] = useState(
-    TOURNAMENTS[0]?.id ?? ""
-  );
-  const [matchNumber, setMatchNumber] = useState("1");
-  const [date, setDate] = useState("");
-  const [map, setMap] = useState(MAPS[0]);
-  const [position, setPosition] = useState("1");
+type Props = {
+  searchParams: Promise<{
+    tournament?: string;
+  }>;
+};
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+export default async function NewMatchPage({
+  searchParams,
+}: Props) {
+  const params = await searchParams;
 
-    if (!tournamentId) {
-      alert("Please create a tournament first.");
-      return;
-    }
+  const [
+    tournamentsResult,
+    teamsResult,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("tournaments")
+      .select("id,name,status")
+      .order("created_at", {
+        ascending: false,
+      }),
 
-    alert(
-      `Match ready to save:\n\nMatch ${matchNumber}\nMap: ${map}\nPosition: #${position}`
-    );
-  }
+    supabaseAdmin
+      .from("teams")
+      .select("id,name,short_name")
+      .order("name"),
+  ]);
+
+  const tournaments =
+    tournamentsResult.data ?? [];
+
+  const teams = teamsResult.data ?? [];
+
+  const selectedTournament =
+    params.tournament &&
+    tournaments.some(
+      (item) => item.id === params.tournament
+    )
+      ? params.tournament
+      : tournaments[0]?.id ?? "";
+
+  const selectedTeam =
+    teams[0]?.id ?? "";
+
+  const { data: players } =
+    selectedTeam
+      ? await supabaseAdmin
+          .from("players")
+          .select("id,name,role")
+          .eq("team_id", selectedTeam)
+          .eq("active", true)
+          .order("name")
+      : { data: [] };
 
   return (
-    <div className="admin-page">
+    <AdminShell
+      title="Add Match"
+      subtitle="Enter the complete match result and player kill data."
+    >
       <div className="admin-page-heading">
-        <Link href="/admin/matches" className="admin-back-link">
+        <Link
+          href="/admin/matches"
+          className="admin-back-link"
+        >
           <ArrowLeft size={16} />
           Back to Matches
         </Link>
@@ -50,14 +94,14 @@ export default function NewMatchPage() {
         <h2>Add Match Result</h2>
 
         <p>
-          Enter the match result. Player kills will be connected
-          to this match in the next data layer.
+          All scoring is calculated automatically
+          from the central scoring rules.
         </p>
       </div>
 
       <form
+        action={createMatch}
         className="admin-form-panel"
-        onSubmit={handleSubmit}
       >
         <div className="admin-form-icon">
           <Swords size={24} />
@@ -68,17 +112,39 @@ export default function NewMatchPage() {
             <span>Tournament</span>
 
             <select
-              value={tournamentId}
-              onChange={(event) =>
-                setTournamentId(event.target.value)
-              }
+              name="tournamentId"
+              defaultValue={selectedTournament}
+              required
             >
-              {TOURNAMENTS.map((tournament) => (
+              {tournaments.map((tournament) => (
                 <option
-                  value={tournament.id}
                   key={tournament.id}
+                  value={tournament.id}
                 >
-                  {tournament.name}
+                  {tournament.name} ·{" "}
+                  {tournament.status}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="admin-field admin-field-full">
+            <span>Team</span>
+
+            <select
+              name="teamId"
+              defaultValue={selectedTeam}
+              required
+            >
+              {teams.map((team) => (
+                <option
+                  key={team.id}
+                  value={team.id}
+                >
+                  {team.name}
+                  {team.short_name
+                    ? ` (${team.short_name})`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -89,24 +155,19 @@ export default function NewMatchPage() {
 
             <input
               type="number"
+              name="matchNumber"
               min="1"
-              value={matchNumber}
-              onChange={(event) =>
-                setMatchNumber(event.target.value)
-              }
+              defaultValue="1"
               required
             />
           </label>
 
           <label className="admin-field">
-            <span>Date</span>
+            <span>Match Date</span>
 
             <input
               type="date"
-              value={date}
-              onChange={(event) =>
-                setDate(event.target.value)
-              }
+              name="matchDate"
               required
             />
           </label>
@@ -115,13 +176,14 @@ export default function NewMatchPage() {
             <span>Map</span>
 
             <select
-              value={map}
-              onChange={(event) =>
-                setMap(event.target.value)
-              }
+              name="map"
+              defaultValue={MAPS[0]}
             >
               {MAPS.map((item) => (
-                <option value={item} key={item}>
+                <option
+                  value={item}
+                  key={item}
+                >
                   {item}
                 </option>
               ))}
@@ -133,16 +195,67 @@ export default function NewMatchPage() {
 
             <input
               type="number"
+              name="placement"
               min="1"
               max="12"
-              value={position}
-              onChange={(event) =>
-                setPosition(event.target.value)
-              }
+              defaultValue="1"
               required
             />
           </label>
         </div>
+
+        <section className="admin-panel">
+          <div className="admin-panel-heading">
+            <div>
+              <span>PLAYER RESULTS</span>
+              <h2>Kill Breakdown</h2>
+            </div>
+          </div>
+
+          {players.length === 0 ? (
+            <div className="admin-empty-state">
+              <strong>
+                No active players found
+              </strong>
+
+              <span>
+                Add players to the selected team
+                before entering match kills.
+              </span>
+            </div>
+          ) : (
+            <div className="admin-form-grid">
+              {players.map((player) => (
+                <div
+                  key={player.id}
+                  className="admin-field"
+                >
+                  <span>
+                    {player.name}
+                    {player.role
+                      ? ` · ${player.role}`
+                      : ""}
+                  </span>
+
+                  <input
+                    type="hidden"
+                    name="player"
+                    value={player.id}
+                  />
+
+                  <input
+                    type="number"
+                    name="kills"
+                    min="0"
+                    defaultValue="0"
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="admin-form-footer">
           <Link
@@ -155,12 +268,17 @@ export default function NewMatchPage() {
           <button
             type="submit"
             className="admin-primary-button"
+            disabled={
+              tournaments.length === 0 ||
+              teams.length === 0 ||
+              players.length === 0
+            }
           >
             <Save size={18} />
             Save Match
           </button>
         </div>
       </form>
-    </div>
+    </AdminShell>
   );
 }
