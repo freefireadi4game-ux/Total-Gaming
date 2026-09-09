@@ -3,16 +3,17 @@ import {
   ArrowLeft,
   Crosshair,
   Map,
+  Pencil,
   Trophy,
   Users,
+  Trash2,
 } from "lucide-react";
 
 import AdminShell from "@/components/admin/AdminShell";
-import {
-  MATCHES,
-  PLAYERS,
-} from "@/lib/data";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { calculateMatchPoints } from "@/lib/scoring";
+
+import { deleteMatch } from "./actions";
 
 import "../../admin.css";
 
@@ -27,9 +28,50 @@ export default async function MatchDetailsPage({
 }: Props) {
   const { id } = await params;
 
-  const match = MATCHES.find(
-    (item) => item.id === id
-  );
+  const { data: match, error } =
+    await supabaseAdmin
+      .from("matches")
+      .select(
+        `
+          id,
+          match_number,
+          match_date,
+          map,
+          placement,
+          position_points,
+          total_kills,
+          total_points,
+          tournament_id,
+          tournaments (
+            id,
+            name
+          ),
+          teams (
+            id,
+            name,
+            short_name
+          ),
+          match_players (
+            id,
+            player_id,
+            kills,
+            points,
+            players (
+              id,
+              name,
+              role
+            )
+          )
+        `
+      )
+      .eq("id", id)
+      .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to load match: ${error.message}`
+    );
+  }
 
   if (!match) {
     return (
@@ -48,29 +90,76 @@ export default async function MatchDetailsPage({
     );
   }
 
-  const killCount = match.players.reduce(
-    (total, player) =>
-      total + player.kills,
-    0
-  );
+  const tournament =
+    Array.isArray(match.tournaments)
+      ? match.tournaments[0]
+      : match.tournaments;
 
-  const points = calculateMatchPoints(
-    match.position,
-    killCount
-  );
+  const team =
+    Array.isArray(match.teams)
+      ? match.teams[0]
+      : match.teams;
+
+  const players =
+    (match.match_players ?? []).map(
+      (item) => {
+        const player =
+          Array.isArray(item.players)
+            ? item.players[0]
+            : item.players;
+
+        return {
+          id: item.id,
+          name:
+            player?.name ??
+            item.player_id,
+          role:
+            player?.role ??
+            "Player",
+          kills: item.kills,
+          points: item.points,
+        };
+      }
+    );
+
+  const calculated =
+    calculateMatchPoints(
+      match.total_kills,
+      match.placement
+    );
 
   return (
     <AdminShell
-      title={`Match ${match.matchNumber}`}
-      subtitle={`${match.map} · ${match.date}`}
+      title={`Match ${match.match_number}`}
+      subtitle={`${match.map ?? "Map"} · ${match.match_date}`}
     >
-      <Link
-        href="/admin/matches"
-        className="admin-secondary-button"
-      >
-        <ArrowLeft size={16} />
-        Back to Matches
-      </Link>
+      <div className="admin-page-toolbar">
+        <div>
+          <Link
+            href="/admin/matches"
+            className="admin-back-link"
+          >
+            <ArrowLeft size={16} />
+            All Matches
+          </Link>
+
+          <span className="admin-muted-label">
+            MATCH CONTROL
+          </span>
+
+          <h2 className="admin-page-title">
+            Match {match.match_number}
+          </h2>
+        </div>
+
+        <Link
+          href={`/admin/matches/${id}/edit`}
+          className="admin-primary-button"
+        >
+          <Pencil size={17} />
+          Edit Match
+        </Link>
+      </div>
 
       <div className="admin-stats-grid">
         <div className="admin-stat-card">
@@ -80,7 +169,9 @@ export default async function MatchDetailsPage({
 
           <div>
             <span>MAP</span>
-            <strong>{match.map}</strong>
+            <strong>
+              {match.map ?? "—"}
+            </strong>
           </div>
         </div>
 
@@ -91,7 +182,9 @@ export default async function MatchDetailsPage({
 
           <div>
             <span>POSITION</span>
-            <strong>{match.position}</strong>
+            <strong>
+              #{match.placement}
+            </strong>
           </div>
         </div>
 
@@ -102,7 +195,9 @@ export default async function MatchDetailsPage({
 
           <div>
             <span>KILLS</span>
-            <strong>{killCount}</strong>
+            <strong>
+              {match.total_kills}
+            </strong>
           </div>
         </div>
 
@@ -113,10 +208,55 @@ export default async function MatchDetailsPage({
 
           <div>
             <span>TOTAL POINTS</span>
-            <strong>{points}</strong>
+            <strong>
+              {calculated.totalPoints}
+            </strong>
           </div>
         </div>
       </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-heading">
+          <div>
+            <span>RESULT INFORMATION</span>
+            <h2>Match Overview</h2>
+          </div>
+        </div>
+
+        <div className="admin-list">
+          <div className="admin-list-row">
+            <div className="admin-list-main">
+              <div className="admin-list-icon">
+                <Trophy size={18} />
+              </div>
+
+              <div>
+                <strong>
+                  {tournament?.name ??
+                    "Tournament"}
+                </strong>
+
+                <span>
+                  {team?.name ??
+                    "Team"}
+                </span>
+              </div>
+            </div>
+
+            <div className="admin-list-right">
+              <div className="admin-points">
+                <strong>
+                  {calculated.positionPoints}
+                </strong>
+
+                <span>
+                  POSITION PTS
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="admin-panel">
         <div className="admin-panel-heading">
@@ -126,55 +266,95 @@ export default async function MatchDetailsPage({
           </div>
         </div>
 
-        <div className="admin-table">
-          {match.players.map(
-            (matchPlayer) => {
-              const player = PLAYERS.find(
-                (item) =>
-                  item.id ===
-                  matchPlayer.playerId
-              );
+        {players.length === 0 ? (
+          <div className="admin-empty-state">
+            <Users size={28} />
 
-              return (
-                <div
-                  className="admin-table-row"
-                  key={matchPlayer.playerId}
-                >
-                  <div className="admin-table-main">
-                    <div className="admin-action-icon">
-                      <Users size={17} />
-                    </div>
+            <strong>
+              No player results
+            </strong>
 
-                    <div>
-                      <strong>
-                        {player?.name ??
-                          matchPlayer.playerId}
-                      </strong>
-
-                      <span>
-                        {player?.role ?? "Player"}
-                      </span>
-                    </div>
+            <span>
+              This match has no player kill
+              records.
+            </span>
+          </div>
+        ) : (
+          <div className="admin-table">
+            {players.map((player) => (
+              <div
+                className="admin-table-row"
+                key={player.id}
+              >
+                <div className="admin-table-main">
+                  <div className="admin-action-icon">
+                    <Users size={17} />
                   </div>
 
-                  <div className="admin-table-info">
-                    <span>KILLS</span>
+                  <div>
                     <strong>
-                      {matchPlayer.kills}
+                      {player.name}
                     </strong>
+
+                    <span>
+                      {player.role}
+                    </span>
                   </div>
                 </div>
-              );
-            }
-          )}
-        </div>
+
+                <div className="admin-table-info">
+                  <span>KILLS</span>
+
+                  <strong>
+                    {player.kills}
+                  </strong>
+                </div>
+
+                <div className="admin-table-info">
+                  <span>POINTS</span>
+
+                  <strong>
+                    {player.points}
+                  </strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="admin-note">
-        <strong>Admin controlled:</strong>{" "}
-        Match result data is displayed from the
-        central match dataset and scoring rules.
+        <strong>Calculated:</strong>{" "}
+        {match.total_kills} kill points +{" "}
+        {match.position_points} placement
+        points ={" "}
+        {match.total_points} total points.
       </div>
+
+      <section className="admin-panel">
+        <div className="admin-panel-heading">
+          <div>
+            <span>DANGER ZONE</span>
+            <h2>Delete Match</h2>
+          </div>
+        </div>
+
+        <form action={deleteMatch}>
+          <input
+            type="hidden"
+            name="matchId"
+            value={id}
+          />
+
+          <button
+            type="submit"
+            className="admin-secondary-button"
+          >
+            <Trash2 size={16} />
+            Delete This Match
+          </button>
+        </form>
+      </section>
     </AdminShell>
   );
 }
